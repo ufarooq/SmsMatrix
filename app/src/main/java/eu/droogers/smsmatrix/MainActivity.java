@@ -1,9 +1,6 @@
 package eu.droogers.smsmatrix;
 
-import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -11,8 +8,12 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.ViewModelProvider;
+
+import eu.droogers.smsmatrix.viewModel.MainViewModel;
 
 import static android.Manifest.permission.READ_CONTACTS;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
@@ -22,9 +23,8 @@ import static android.Manifest.permission.RECEIVE_SMS;
 import static android.Manifest.permission.SEND_SMS;
 import static android.content.ContentValues.TAG;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
     static Matrix mx;
-    private SharedPreferences sp;
     private EditText botUsername;
     private EditText botPassword;
     private EditText username;
@@ -33,16 +33,18 @@ public class MainActivity extends Activity {
     private EditText syncDelay;
     private EditText syncTimeout;
     private static final String[] PERMISSIONS_REQUIRED = new String[]{
-        READ_SMS, SEND_SMS, RECEIVE_SMS, READ_PHONE_STATE, READ_CONTACTS, READ_EXTERNAL_STORAGE
+            READ_SMS, SEND_SMS, RECEIVE_SMS, READ_PHONE_STATE, READ_CONTACTS, READ_EXTERNAL_STORAGE
     };
     private static final int PERMISSION_REQUEST_CODE = 200;
+    private MainViewModel viewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        sp = getSharedPreferences("settings", Context.MODE_PRIVATE);
+        viewModel = new ViewModelProvider(this).get(MainViewModel.class);
+
         botUsername = (EditText) findViewById(R.id.editText_botUsername);
         botPassword = (EditText) findViewById(R.id.editText_botpassword);
         username = (EditText) findViewById(R.id.editText_username);
@@ -51,14 +53,13 @@ public class MainActivity extends Activity {
         syncDelay = (EditText) findViewById(R.id.editText_syncDelay);
         syncTimeout = (EditText) findViewById(R.id.editText_syncTimeout);
 
-        botUsername.setText(sp.getString("botUsername", ""));
-        botPassword.setText(sp.getString("botPassword", ""));
-        username.setText(sp.getString("username", ""));
-        device.setText(sp.getString("device", ""));
-        hsUrl.setText(sp.getString("hsUrl", ""));
-        syncDelay.setText(sp.getString("syncDelay", "12"));
-        syncTimeout.setText(sp.getString("syncTimeout", "30"));
-
+        botUsername.setText(viewModel.getBotUsername());
+        botPassword.setText(viewModel.getBotPassword());
+        username.setText(viewModel.getUsername());
+        device.setText(viewModel.getDevice());
+        hsUrl.setText(viewModel.getHsUrl());
+        syncDelay.setText(viewModel.getSyncDelay());
+        syncTimeout.setText(viewModel.getSyncTimeout());
 
         Button saveButton = (Button) findViewById(R.id.button_save);
         saveButton.setOnClickListener(new View.OnClickListener() {
@@ -67,17 +68,16 @@ public class MainActivity extends Activity {
                 if (!checkPermissions()) {
                     askPermissions();
                 } else {
-                    SharedPreferences.Editor editor = sp.edit();
-                    editor.putString("botUsername", botUsername.getText().toString());
-                    editor.putString("botPassword", botPassword.getText().toString());
-                    editor.putString("username", username.getText().toString());
-                    editor.putString("device", device.getText().toString());
-                    editor.putString("hsUrl", hsUrl.getText().toString());
-                    editor.putString("syncDelay", syncDelay.getText().toString());
-                    editor.putString("syncTimeout", syncTimeout.getText().toString());
-                    editor.apply();
+                    viewModel.setBotUsername(botUsername.getText().toString());
+                    viewModel.setBotPassword(botPassword.getText().toString());
+                    viewModel.setUsername(username.getText().toString());
+                    viewModel.setDevice(device.getText().toString());
+                    viewModel.setHsUrl(hsUrl.getText().toString());
+                    viewModel.setSyncDelay(syncDelay.getText().toString());
+                    viewModel.setSyncTimeout(syncTimeout.getText().toString());
+                    viewModel.apply();
 
-                    Log.e(TAG, "onClick: " + botUsername.getText().toString() );
+                    Log.e(TAG, "onClick: " + botUsername.getText().toString());
                     startService();
                 }
 
@@ -91,9 +91,9 @@ public class MainActivity extends Activity {
     }
 
     private boolean checkPermissions() {
-        for (String permission: PERMISSIONS_REQUIRED) {
+        for (String permission : PERMISSIONS_REQUIRED) {
             int result = ContextCompat.checkSelfPermission(getApplicationContext(), permission);
-            if (result  != PackageManager.PERMISSION_GRANTED) {
+            if (result != PackageManager.PERMISSION_GRANTED) {
                 return false;
             }
             Log.i(TAG, "setOnClickListener - result result result" + result);
